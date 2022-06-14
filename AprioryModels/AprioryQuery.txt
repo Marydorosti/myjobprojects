@@ -1,0 +1,5 @@
+SET TRAN ISOLATION LEVEL READ UNCOMMITTED;
+SELECT  h.IdIvcHdr, g.IdGds, d.EffectiveConfirmedAmount AS Amount
+FROM    dbo.SlsIvcDtl d
+        INNER JOIN dbo.SlsIvcHdr h ON h.IdIvcHdr = d.IdIvcHdr
+        INNER JOIN GdsSpc g ON g.IdGds = d.IdGds ORDER BY h.IdIvcHdr;

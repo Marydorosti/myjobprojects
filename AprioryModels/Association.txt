@@ -1,0 +1,217 @@
+pip install mlxtend
+import pandas as pd
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.width', 500)
+pd.set_option('display.expand_frame_repr', False)
+from mlxtend.frequent_patterns import apriori, association_rules
+df_ = pd.read_excel("online_retail_II.xlsx"
+                    , sheet_name="Year 2010-2011")
+df = df_.copy()
+df.info()
+
+def outlier_thresholds(dataframe, variable):
+    quartile1 = dataframe[variable].quantile(0.01)
+    quartile3 = dataframe[variable].quantile(0.99)
+    interquantile_range = quartile3 - quartile1
+    up_limit = quartile3 + 1.5 * interquantile_range
+    low_limit = quartile1 - 1.5 * interquantile_range
+    return low_limit, up_limit
+def replace_with_thresholds(dataframe, variable):
+    low_limit, up_limit = outlier_thresholds(dataframe, variable)
+    dataframe.loc[(dataframe[variable] < low_limit), variable] = low_limit
+    dataframe.loc[(dataframe[variable] > up_limit), variable] = up_limit
+def retail_data_prep(dataframe):
+    dataframe.dropna(inplace=True)
+    dataframe = dataframe[~dataframe["Invoice"].str.contains("C", na=False)]
+    dataframe = dataframe[dataframe["Quantity"] > 0]
+    dataframe = dataframe[dataframe["Price"] > 0]
+    replace_with_thresholds(dataframe, "Quantity")
+    replace_with_thresholds(dataframe, "Price")
+    return dataframe
+#Since our primary purpose is not data preprocessing, we quickly skip the data preprocessing part here by using the functions I wrote above specifically.
+#But basically we get rid of noisy data and make our data purer.
+df = retail_data_prep(df)
+df.info()
+
+
+
+df_fr = df[df[‘Country’] == “France”]
+df_fr.groupby(['Invoice', 'Description']).agg({"Quantity": "sum"}).tail(20)
+
+
+#For better appearance, we use 'unstack' .
+df_fr.groupby([‘Invoice’, ‘Description’]).agg({“Quantity”: “sum”}).unstack().iloc[0:5, 0:5]
+
+
+df_fr.groupby([‘Invoice’, ‘Description’]).agg({“Quantity”: “sum”}).unstack().fillna(0).iloc[0:5, 0:5]
+
+df_fr.groupby(['Invoice', 'Description']). \
+    agg({"Quantity": "sum"}). \
+    unstack(). \
+    fillna(0). \
+    applymap(lambda x: 1 if x > 0 else 0).iloc[0:5, 0:5]
+	
+	
+#extra
+def create_invoice_product_df(dataframe, id=False):
+    if id:
+        return dataframe.groupby(['Invoice', "StockCode"])['Quantity'].sum().unstack().fillna(0). \
+            applymap(lambda x: 1 if x > 0 else 0)
+    else:
+        return dataframe.groupby(['Invoice', 'Description'])['Quantity'].sum().unstack().fillna(0). \
+            applymap(lambda x: 1 if x > 0 else 0)
+#This code is the functionalized version of the above process. But why stockcode in one and description in the other? 
+   -Because = When you write their descriptions, it seems so silly and long, I think it makes more sense to write the stockcodes..
+fr_inv_pro_df = create_invoice_product_df(df_fr)
+fr_inv_pro_df.head()
+
+
+fr_inv_pro_df = create_invoice_product_df(df_fr, id=True)
+fr_inv_pro_df.head()
+
+#to give the name of choosen stockcode 
+def check_id(dataframe, stock_code):   
+    try:
+        for x in stock_code:
+            product_name = dataframe[dataframe["StockCode"] == x][["Description"]].values[0].tolist()
+            print(product_name)        
+    except:
+        product_name = dataframe[dataframe["StockCode"] == stock_code][["Description"]].values[0].tolist()
+        print(product_name)
+check_id(df_fr, 10120)
+OUT = ['DOGGY RUBBER']
+
+
+
+
+
+frequent_itemsets = apriori(fr_inv_pro_df, min_support=0.01, use_colnames=True)
+fr_inv_pro_df = Our data
+Min_support  = Minimum probability , If a product's probability of association is less than 0.01 ,Dont show it. YOu will understand better when you see the data.
+frequent_itemsets.sort_values("support", ascending=False).head(15)
+
+
+
+#Revealing association rules
+rules = association_rules(frequent_itemsets, metric="support", min_threshold=0.01)
+#As a data we used frequent_itemsets this time. The one that we created recently above.
+rules.sort_values("support", ascending=False).head
+
+
+
+rules.sort_values(“lift”, ascending=False).head(500)
+
+
+check_id(df,[22728, 23199, 22726, 20750])
+OUTPUT =
+['ALARM CLOCK BAKELIKE PINK']
+['JUMBO BAG APPLES']
+['ALARM CLOCK BAKELIKE GREEN']
+['RED RETROSPOT MINI CASES']
+
+import pandas as pd
+pd.set_option(‘display.max_columns’, None)
+from mlxtend.frequent_patterns import apriori, association_rules
+def create_invoice_product_df(dataframe, id=False):
+    if id:
+        return dataframe.groupby(['Invoice', "StockCode"])['Quantity'].sum().unstack().fillna(0). \
+            applymap(lambda x: 1 if x > 0 else 0)
+    else:
+        return dataframe.groupby(['Invoice', 'Description'])['Quantity'].sum().unstack().fillna(0). \
+            applymap(lambda x: 1 if x > 0 else 0)
+    
+########################################
+def check_id(dataframe, stock_code):   
+    try:
+        for x in stock_code:
+            product_name = dataframe[dataframe["StockCode"] == x][["Description"]].values[0].tolist()
+            print(product_name)        
+    except:
+        product_name = dataframe[dataframe["StockCode"] == stock_code][["Description"]].values[0].tolist()
+        print(product_name)
+############################################
+def create_rules(dataframe, id=True, country="France"):
+    dataframe = dataframe[dataframe['Country'] == country]
+    dataframe = create_invoice_product_df(dataframe, id)
+    frequent_itemsets = apriori(dataframe, min_support=0.01, use_colnames=True)
+    rules = association_rules(frequent_itemsets, metric="support", min_threshold=0.01)
+    return rules
+###############################################################
+def outlier_thresholds(dataframe, variable):
+    quartile1 = dataframe[variable].quantile(0.01)
+    quartile3 = dataframe[variable].quantile(0.99)
+    interquantile_range = quartile3 - quartile1
+    up_limit = quartile3 + 1.5 * interquantile_range
+    low_limit = quartile1 - 1.5 * interquantile_range
+    return low_limit, up_limit
+###############################################################
+def replace_with_thresholds(dataframe, variable):
+    low_limit, up_limit = outlier_thresholds(dataframe, variable)
+    dataframe.loc[(dataframe[variable] < low_limit), variable] = low_limit
+    dataframe.loc[(dataframe[variable] > up_limit), variable] = up_limit
+################################################################
+def retail_data_prep(dataframe):
+    dataframe.dropna(inplace=True)
+    dataframe = dataframe[~dataframe["Invoice"].str.contains("C", na=False)]
+    dataframe = dataframe[dataframe["Quantity"] > 0]
+    dataframe = dataframe[dataframe["Price"] > 0]
+    replace_with_thresholds(dataframe, "Quantity")
+    replace_with_thresholds(dataframe, "Price")
+    return dataframe
+df_ = pd.read_excel("online_retail_II.xlsx"
+                    , sheet_name="Year 2010-2011")
+df = df_.copy()
+df = retail_data_prep(df)
+rules = create_rules(df)
+rules.head(10)
+
+
+
+
+#Let’s do it for another country as an example.
+rules_grm = create_rules(df, country="Germany")
+rules_grm.sort_values("lift", ascending=False).head(50)
+
+
+
+# Sample:
+# sample product id: 22492
+product_id = 22492
+check_id(df, product_id)
+ 
+OUT =  ['MINI PAINT SET VINTAGE ']
+sorted_rules = rules.sort_values("lift", ascending=False)
+recommendation_list = []
+for i,product in enumerate(sorted_rules["antecedents"]):
+    for j in list(product):
+        if j == product_id:
+            recommendation_list.append(list(sorted_rules.iloc[i]["consequents"])[0])
+recommendation_list[0:2]
+ OUT  = [22556, 22551]
+check_id(df, recommendation_list[0:3])
+out = 
+['PLASTERS IN TIN CIRCUS PARADE ']
+['PLASTERS IN TIN SPACEBOY']
+['ROUND SNACK BOXES SET OF4 WOODLAND ']
+
+
+def arl_recommender(rules_df, product_id, rec_count=1):
+    sorted_rules = rules_df.sort_values("lift", ascending=False)
+    recommendation_list = []
+for i, product in sorted_rules["antecedents"].items():
+        for j in list(product):
+            if j == product_id:
+                recommendation_list.append(list(sorted_rules.iloc[i]["consequents"]))
+recommendation_list = list({item for item_list in recommendation_list for item in item_list})
+return recommendation_list[:rec_count]
+arl_recommender(rules, 22492, 1)
+#rules =   df = retail_data_prep(df)
+         rules = create_rules(df)     , we had definied like that.
+# 22492 , Product's id
+#Rec_code = How many recomms you want , 1 is default
+OUT =  [22024]
+arl_recommender(rules, 22492, 2)
+OUT  = [22024, 23049]
+arl_recommender(rules, 22492, 3)
+OUT = [22024, 23049, 22027]

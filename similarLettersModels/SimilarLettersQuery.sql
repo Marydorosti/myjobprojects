@@ -1,0 +1,11 @@
+SET TRAN ISOLATION LEVEL READ UNCOMMITTED;
+USE PayaAfzarPendarData
+SELECT o.Id,
+       o.DisplayName,
+       o.BodyText,
+       c.DisplayName AS Type
+FROM dbo.AUT_Objects o
+    INNER JOIN dbo.AUT_Classes c
+        ON c.Id = o.Class
+WHERE o.BaseClass = 2
+      AND o.BodyText <> '';

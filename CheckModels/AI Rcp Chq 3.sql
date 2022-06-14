@@ -1,0 +1,465 @@
+DECLARE @IdPrs BIGINT = 38691174;
+
+DECLARE @Chq TABLE
+    (
+        IdChq BIGINT PRIMARY KEY NOT NULL ,
+        Dt_Due DATE NOT NULL ,
+        Dt_Effect DATE NOT NULL ,
+        DueDays AS 1.0 + DATEDIFF(DAY, Dt_Effect, Dt_Due) PERSISTED NOT NULL ,
+        IdPrs BIGINT NOT NULL ,
+        IsDishonor BIT NOT NULL ,
+        IsDeposit BIT NOT NULL ,
+        Amount FLOAT NOT NULL ,
+        IdBr BIGINT NOT NULL ,
+        IdPlc BIGINT NOT NULL ,
+        INDEX IX_IdPrs ( IdPrs ) ,
+        INDEX IX_IdBr ( IdBr )
+    );
+
+INSERT INTO @Chq ( IdChq ,
+                   Amount ,
+                   Dt_Due ,
+                   Dt_Effect ,
+                   IdPrs ,
+                   IsDishonor ,
+                   IsDeposit ,
+                   IdBr ,
+                   IdPlc )
+            SELECT c.IdChq ,
+                   LOG(1 + c.Amount * ISNULL(c.CurRate, 1)) ,
+                   c.Dt_Due ,
+                   th.Dt_Effect ,
+                   pp.IdPrs ,
+                   CASE WHEN EXISTS (   SELECT TOP ( 1 ) *
+                                        FROM   dbo.TrsChqStateHistory shh
+                                        WHERE  shh.IdChq = c.IdChq
+                                               AND shh.IdChqState = 3 ) THEN 1
+                        ELSE 0
+                   END IsDishonor ,
+                   CASE WHEN EXISTS (   SELECT TOP ( 1 ) *
+                                        FROM   dbo.TrsChqStateHistory shh
+                                        WHERE  shh.IdChq = c.IdChq
+                                               AND shh.IdChqState = 8 ) THEN 1
+                        ELSE 0
+                   END IsDeposit ,
+                   c.IdBr ,
+                   c.IdPlc
+            FROM   dbo.TrsChq c
+                   INNER JOIN dbo.TrsChqStateHistory sh ON sh.IdChq = c.IdChq
+                                                           AND sh.LevelNo = 0
+                   INNER JOIN dbo.TrsOperationDtlParty pc ON pc.IdOperationDtlParty = sh.IdOperationDtlParty
+                   INNER JOIN dbo.TrsOperationDtl d ON d.IdOperationDtl = pc.IdOperationDtl
+                   INNER JOIN dbo.TrsOperationHdr th ON th.IdOperationHdr = d.IdOperationHdr
+                   INNER JOIN dbo.TrsFormSetting fs ON fs.IdForm = th.IdForm
+                   CROSS APPLY (   SELECT TOP ( 1 ) *
+                                   FROM   dbo.TrsOperationDtlParty pp
+                                   WHERE  pp.IdOperationDtl = d.IdOperationDtl
+                                          AND pp.IdOperationDtlParty <> pc.IdOperationDtlParty
+                                          AND pp.IdOperationDtlPartyType = 3
+                                          AND pp.IdPrs IS NOT NULL ) pp
+            WHERE  c.IdChqType = 2
+                   AND ISNULL(fs.IsTopOfPeriod, 0) = 0
+                   AND EXISTS (   SELECT TOP ( 1 ) *
+                                  FROM   dbo.TrsChqStateHistory shh
+                                         INNER JOIN dbo.TrsChqState st ON st.IdChqState = shh.IdChqState
+                                  WHERE  shh.IdChq = c.IdChq
+                                         AND st.IdChqStateType = 1 )
+                   AND c.Dt_Due
+                   BETWEEN th.Dt_Effect AND GETDATE()
+                   AND pp.IdPrs = @IdPrs;
+
+DECLARE @BranchInfo TABLE
+    (
+        IdBr BIGINT PRIMARY KEY NOT NULL ,
+        BranchTrsDebtAmount FLOAT NOT NULL ,
+        BranchTrsCreditAmount FLOAT NOT NULL ,
+        BranchSumChqAmount FLOAT NOT NULL ,
+        BranchAvgChqAmount FLOAT NOT NULL ,
+        BranchStDevChqAmount FLOAT NOT NULL ,
+        BranchCountChq FLOAT NOT NULL ,
+        BranchAvgDueDays FLOAT NOT NULL ,
+        BranchCountDishonorChq FLOAT NOT NULL ,
+        BranchSumDishonorChqAmount FLOAT NOT NULL ,
+        BranchAvgDishonorChqAmount FLOAT NOT NULL ,
+        BranchAvgDishonorDueDays FLOAT NOT NULL ,
+        BranchMaxDueDate INT NOT NULL ,
+        BranchFirstOpDays INT NOT NULL ,
+        BranchLastOpDays INT NOT NULL ,
+        BranchLengthOpDays INT NOT NULL ,
+        INDEX IX_IdBr ( IdBr )
+    );
+
+
+INSERT INTO @BranchInfo ( IdBr ,
+                          BranchTrsDebtAmount ,
+                          BranchTrsCreditAmount ,
+                          BranchSumChqAmount ,
+                          BranchAvgChqAmount ,
+                          BranchStDevChqAmount ,
+                          BranchCountChq ,
+                          BranchAvgDueDays ,
+                          BranchCountDishonorChq ,
+                          BranchSumDishonorChqAmount ,
+                          BranchAvgDishonorChqAmount ,
+                          BranchAvgDishonorDueDays ,
+                          BranchMaxDueDate ,
+                          BranchFirstOpDays ,
+                          BranchLastOpDays ,
+                          BranchLengthOpDays )
+            SELECT br.IdBr ,
+                   ISNULL(trs.CreditAmount, 0) ,
+                   ISNULL(trs.DebtAmount, 0) ,
+                   ISNULL(rcpChq.SumChqAmount, 0) ,
+                   ISNULL(rcpChq.AvgChqAmount, 0) ,
+                   ISNULL(rcpChq.StDevChqAmount, 0) ,
+                   ISNULL(rcpChq.CountChq, 0) ,
+                   ISNULL(rcpChq.AvgDueDays, 0) ,
+                   ISNULL(rcpChq.CountDishonorChq, 0) ,
+                   ISNULL(rcpChq.SumDishonorChqAmount, 0) ,
+                   ISNULL(rcpChq.AvgDishonorChqAmount, 0) ,
+                   ISNULL(rcpChq.AvgDishonorDueDays, 0) ,
+                   ISNULL(rcpChq.MaxDueDate, 0) ,
+                   ISNULL(DATEDIFF(DAY, trs.minDt_Effect, GETDATE()) + 1, 0) ,
+                   ISNULL(DATEDIFF(DAY, trs.maxDt_Effect, GETDATE()) + 1, 0) ,
+                   ISNULL(trs.lengthDt_Effect, 0)
+            FROM   dbo.Branch br
+                   INNER JOIN (   SELECT   h.IdBr ,
+                                           SUM(LOG(1 + p.CreditAmount * ISNULL(p.CurRate, 1))) AS CreditAmount ,
+                                           SUM(LOG(1 + p.DebtAmount * ISNULL(p.CurRate, 1))) AS DebtAmount ,
+                                           MIN(h.Dt_Effect) AS minDt_Effect ,
+                                           MAX(h.Dt_Effect) AS maxDt_Effect ,
+                                           DATEDIFF(DAY, MIN(h.Dt_Effect), MAX(h.Dt_Effect)) + 1 AS lengthDt_Effect
+                                  FROM     dbo.TrsOperationDtlParty p
+                                           INNER JOIN dbo.TrsOperationDtl d ON d.IdOperationDtl = p.IdOperationDtl
+                                           INNER JOIN dbo.TrsOperationHdr h ON h.IdOperationHdr = d.IdOperationHdr
+                                           LEFT OUTER JOIN dbo.TrsFormSetting fs ON fs.IdForm = h.IdForm
+                                  WHERE    p.IdOperationDtlPartyType <> 3
+                                           AND ISNULL(fs.IsTopOfPeriod, 0) = 0
+                                  GROUP BY h.IdBr ) trs ON trs.IdBr = br.IdBr
+                   INNER JOIN (   SELECT   c.IdBr ,
+                                           SUM(c.Amount) AS SumChqAmount ,
+                                           AVG(c.Amount) AS AvgChqAmount ,
+                                           STDEV(c.Amount) AS StDevChqAmount ,
+                                           COUNT(DISTINCT c.IdChq) AS CountChq ,
+                                           SUM(c.DueDays * c.Amount) / SUM(c.Amount) AS AvgDueDays ,
+                                           MAX(c.DueDays) AS MaxDueDate ,
+                                           SUM(CASE WHEN dishonor.IdChqStateHistory IS NOT NULL THEN 1
+                                                    ELSE 0
+                                               END) AS CountDishonorChq ,
+                                           SUM(CASE WHEN dishonor.IdChqStateHistory IS NOT NULL THEN c.Amount
+                                                    ELSE 0
+                                               END) AS SumDishonorChqAmount ,
+                                           AVG(CASE WHEN dishonor.IdChqStateHistory IS NOT NULL THEN c.Amount
+                                                    ELSE 0
+                                               END) AS AvgDishonorChqAmount ,
+                                           SUM(CASE WHEN dishonor.IdChqStateHistory IS NOT NULL THEN c.DueDays * c.Amount
+                                                    ELSE 0
+                                               END) / NULLIF(SUM(CASE WHEN dishonor.IdChqStateHistory IS NOT NULL THEN c.Amount
+                                                                      ELSE 0
+                                                                 END), 0) AS AvgDishonorDueDays
+                                  FROM     @Chq c
+                                           OUTER APPLY (   SELECT TOP ( 1 ) *
+                                                           FROM   dbo.TrsChqStateHistory sh
+                                                           WHERE  sh.IdChq = c.IdChq
+                                                                  AND sh.IdChqState = 3 ) dishonor
+                                  GROUP BY c.IdBr ) rcpChq ON br.IdBr = rcpChq.IdBr;
+
+DECLARE @PrsTrsInfo TABLE
+    (
+        IdPrs BIGINT PRIMARY KEY NOT NULL ,
+        PrsType TINYINT NOT NULL ,
+        TrsDebtAmount FLOAT NOT NULL ,
+        TrsCreditAmount FLOAT NOT NULL ,
+        SumChqAmount FLOAT NOT NULL ,
+        AvgChqAmount FLOAT NOT NULL ,
+        StDevChqAmount FLOAT NOT NULL ,
+        CountChq FLOAT NOT NULL ,
+        WeightedAvgDueDays FLOAT NOT NULL ,
+        AvgDueDays FLOAT NOT NULL ,
+        StDevDueDays FLOAT NOT NULL ,
+        CountDishonorChq FLOAT NOT NULL ,
+        SumDishonorChqAmount FLOAT NOT NULL ,
+        AvgDishonorChqAmount FLOAT NOT NULL ,
+        AvgDishonorDueDays FLOAT NOT NULL ,
+        MaxDueDate INT NOT NULL ,
+        FirstOpDays INT NOT NULL ,
+        LastOpDays INT NOT NULL ,
+        LengthOpDays INT NOT NULL ,
+        INDEX IX_IdPrs ( IdPrs )
+    );
+
+INSERT INTO @PrsTrsInfo ( IdPrs ,
+                          PrsType ,
+                          TrsDebtAmount ,
+                          TrsCreditAmount ,
+                          SumChqAmount ,
+                          AvgChqAmount ,
+                          StDevChqAmount ,
+                          CountChq ,
+                          WeightedAvgDueDays ,
+                          AvgDueDays ,
+                          StDevDueDays ,
+                          CountDishonorChq ,
+                          SumDishonorChqAmount ,
+                          AvgDishonorChqAmount ,
+                          AvgDishonorDueDays ,
+                          MaxDueDate ,
+                          FirstOpDays ,
+                          LastOpDays ,
+                          LengthOpDays )
+            SELECT ps.IdPrs ,
+                   ps.PrsType ,
+                   ISNULL(trs.CreditAmount, 0) ,
+                   ISNULL(trs.DebtAmount, 0) ,
+                   ISNULL(rcpChq.SumChqAmount, 0) ,
+                   ISNULL(rcpChq.AvgChqAmount, 0) ,
+                   ISNULL(rcpChq.StDevChqAmount, 0) ,
+                   ISNULL(rcpChq.CountChq, 0) ,
+                   ISNULL(rcpChq.WeightedAvgDueDays, 0) ,
+                   ISNULL(rcpChq.AvgDueDate, 0) ,
+                   ISNULL(rcpChq.StDevDueDate, 0) ,
+                   ISNULL(rcpChq.CountDishonorChq, 0) ,
+                   ISNULL(rcpChq.SumDishonorChqAmount, 0) ,
+                   ISNULL(rcpChq.AvgDishonorChqAmount, 0) ,
+                   ISNULL(rcpChq.AvgDishonorDueDays, 0) ,
+                   ISNULL(rcpChq.MaxDueDate, 0) ,
+                   ISNULL(DATEDIFF(DAY, trs.minDt_Effect, GETDATE()) + 1, 0) ,
+                   ISNULL(DATEDIFF(DAY, trs.maxDt_Effect, GETDATE()) + 1, 0) ,
+                   ISNULL(trs.lengthDt_Effect, 0)
+            FROM   dbo.PrsSpc ps
+                   INNER JOIN (   SELECT   p.IdPrs ,
+                                           ISNULL(SUM(LOG(1 + ISNULL(p.CreditAmount, 0) * ISNULL(p.CurRate, 1))), 0) AS CreditAmount ,
+                                           ISNULL(SUM(LOG(1 + ISNULL(p.DebtAmount, 0) * ISNULL(p.CurRate, 1))), 0) AS DebtAmount ,
+                                           MIN(h.Dt_Effect) AS minDt_Effect ,
+                                           MAX(h.Dt_Effect) AS maxDt_Effect ,
+                                           ISNULL(DATEDIFF(DAY, MIN(h.Dt_Effect), MAX(h.Dt_Effect)) + 1, 0) AS lengthDt_Effect
+                                  FROM     dbo.TrsOperationDtlParty p
+                                           INNER JOIN dbo.TrsOperationDtl d ON d.IdOperationDtl = p.IdOperationDtl
+                                           INNER JOIN dbo.TrsOperationHdr h ON h.IdOperationHdr = d.IdOperationHdr
+                                           LEFT OUTER JOIN dbo.TrsFormSetting fs ON fs.IdForm = h.IdForm
+                                  WHERE    p.IdOperationDtlPartyType = 3
+                                           AND ISNULL(fs.IsTopOfPeriod, 0) = 0
+                                           AND p.IdPrs IS NOT NULL
+                                  GROUP BY p.IdPrs ) trs ON trs.IdPrs = ps.IdPrs
+                   INNER JOIN (   SELECT   c.IdPrs ,
+                                           SUM(1 + c.Amount) AS SumChqAmount ,
+                                           AVG(c.Amount) AS AvgChqAmount ,
+                                           STDEV(c.Amount) AS StDevChqAmount ,
+                                           COUNT(DISTINCT c.IdChq) AS CountChq ,
+                                           SUM(c.DueDays * c.Amount) / SUM(c.Amount) AS WeightedAvgDueDays ,
+                                           AVG(c.DueDays) AS AvgDueDate ,
+                                           STDEV(c.DueDays) AS StDevDueDate ,
+                                           MAX(c.DueDays) AS MaxDueDate ,
+                                           SUM(CASE WHEN dishonor.IdChqStateHistory IS NOT NULL THEN 1
+                                                    ELSE 0
+                                               END) AS CountDishonorChq ,
+                                           SUM(CASE WHEN dishonor.IdChqStateHistory IS NOT NULL THEN c.Amount
+                                                    ELSE 0
+                                               END) AS SumDishonorChqAmount ,
+                                           AVG(CASE WHEN dishonor.IdChqStateHistory IS NOT NULL THEN c.Amount
+                                                    ELSE 0
+                                               END) AS AvgDishonorChqAmount ,
+                                           SUM(CASE WHEN dishonor.IdChqStateHistory IS NOT NULL THEN c.DueDays * c.Amount
+                                                    ELSE 0
+                                               END) / NULLIF(SUM(CASE WHEN dishonor.IdChqStateHistory IS NOT NULL THEN c.Amount
+                                                                      ELSE 0
+                                                                 END), 0) AS AvgDishonorDueDays
+                                  FROM     @Chq c
+                                           OUTER APPLY (   SELECT TOP ( 1 ) *
+                                                           FROM   dbo.TrsChqStateHistory sh
+                                                           WHERE  sh.IdChq = c.IdChq
+                                                                  AND sh.IdChqState = 3 ) dishonor
+                                  GROUP BY c.IdPrs ) rcpChq ON rcpChq.IdPrs = ps.IdPrs
+            WHERE  ps.IdPrs = @IdPrs;
+
+
+DECLARE @PrsDailyAccInfo TABLE
+    (
+        IdPrs BIGINT NOT NULL ,
+        DebtAmount FLOAT NOT NULL ,
+        CreditAmount FLOAT NOT NULL ,
+        RemainedAmount FLOAT NOT NULL ,
+        Dt_Effect DATE NOT NULL ,
+        INDEX IX_IdPrs_Dt_Effect ( IdPrs, Dt_Effect ) ,
+        INDEX IX_IdPrs ( IdPrs ) ,
+        PRIMARY KEY
+        (
+            IdPrs ,
+            Dt_Effect )
+    );
+
+
+INSERT INTO @PrsDailyAccInfo ( IdPrs ,
+                               DebtAmount ,
+                               CreditAmount ,
+                               RemainedAmount ,
+                               Dt_Effect )
+            SELECT   sad.IdPrs ,
+                     ISNULL(SUM(LOG(1 + d.DebtAmount)), 0) AS DebtAmount ,
+                     ISNULL(SUM(LOG(1 + d.CreditAmount)), 0) AS CreditAmount ,
+                     ISNULL(SUM(SIGN(d.RemainedAmount) * LOG(1 + ABS(d.RemainedAmount))), 0) AS RemainedAmount ,
+                     CONVERT(DATE, h.Dt_Effect_M) AS Dt_Effect
+            FROM     dbo.AccVchHdr h
+                     INNER JOIN dbo.AccVchDtl d ON d.IdVchHdr = h.IdVchHdr
+                     INNER JOIN dbo.AccCoding ac ON ac.IdAccCoding = d.IdAccount
+                     INNER JOIN dbo.AccGroup g ON g.IdAccGrp = ac.IdAccGrp
+                     INNER JOIN dbo.SubAccountsData sad ON sad.IdSubAccountsData = d.IdSubAccountsData
+                     LEFT OUTER JOIN dbo.AccVchType t ON t.IdAccVchType = h.IdVchType
+            WHERE    sad.IdPrs IS NOT NULL
+                     AND ISNULL(t.CuAccVchType, '') <> '1'
+                     AND g.IdGrpType <> 3
+            GROUP BY sad.IdPrs ,
+                     CONVERT(DATE, h.Dt_Effect_M);
+
+
+DECLARE @PrsAccInfo TABLE
+    (
+        IdPrs BIGINT NOT NULL ,
+        AvgDebtAmount FLOAT NOT NULL ,
+        AvgCreditAmount FLOAT NOT NULL ,
+        AvgRemainedAmount FLOAT NOT NULL ,
+        StDevDebtAmount FLOAT NOT NULL ,
+        StDevCreditAmount FLOAT NOT NULL ,
+        StDevRemainedAmount FLOAT NOT NULL ,
+        MaxRemainedAmount FLOAT NOT NULL ,
+        MinRemainedAmount FLOAT NOT NULL ,
+        CountDate INT NOT NULL ,
+        INDEX IX_IdPrs ( IdPrs )
+    );
+
+
+INSERT INTO @PrsAccInfo ( IdPrs ,
+                          AvgDebtAmount ,
+                          AvgCreditAmount ,
+                          AvgRemainedAmount ,
+                          StDevDebtAmount ,
+                          StDevCreditAmount ,
+                          StDevRemainedAmount ,
+                          MaxRemainedAmount ,
+                          MinRemainedAmount ,
+                          CountDate )
+            SELECT   pai.IdPrs ,
+                     ISNULL(AVG(pai.DebtAmount), 0) AS AvgDebtAmount ,
+                     ISNULL(AVG(pai.CreditAmount), 0) AS AvgCreditAmount ,
+                     ISNULL(AVG(pai.RemainedAmount), 0) AS AvgRemainedAmount ,
+                     ISNULL(STDEV(pai.DebtAmount), 0) AS StDevDebtAmount ,
+                     ISNULL(STDEV(pai.CreditAmount), 0) AS StDevCreditAmount ,
+                     ISNULL(STDEV(pai.RemainedAmount), 0) AS StDevRemainedAmount ,
+                     ISNULL(MAX(pai.RemainedAmount), 0) AS MaxRemainedAmount ,
+                     ISNULL(MIN(pai.RemainedAmount), 0) AS MinRemainedAmount ,
+                     COUNT(DISTINCT pai.Dt_Effect) AS CountDate
+            FROM     @PrsDailyAccInfo pai
+            WHERE    pai.IdPrs = @IdPrs
+            GROUP BY pai.IdPrs;
+
+
+
+
+SELECT c.IdPrs ,
+       c.IdBr ,
+       c.IdPlc ,
+       c.Amount AS Amount ,
+       c.DueDays ,
+       c.DueDays * c.Amount AS MulChqAmountDueDate ,
+       pi.PrsType ,
+       pi.TrsDebtAmount ,
+       pi.TrsCreditAmount ,
+       pi.SumChqAmount ,
+       pi.AvgChqAmount ,
+       pi.StDevChqAmount ,
+       pi.CountChq ,
+       pi.WeightedAvgDueDays ,
+       pi.AvgDueDays ,
+       pi.StDevDueDays ,
+       pi.CountDishonorChq ,
+       pi.SumDishonorChqAmount ,
+       pi.AvgDishonorChqAmount ,
+       pi.AvgDishonorDueDays ,
+       c.DueDays / NULLIF(pi.AvgDueDays, 0) AS RatioDueDaysToAvgDueDays ,
+       c.DueDays * c.Amount / NULLIF(pi.WeightedAvgDueDays, 0) AS RatioWeightedDueDaysToWeightedAvgDueDays ,
+       c.Amount / NULLIF(pi.AvgChqAmount, 0) AS RatioChqAmountToAvgChqAmount ,
+       c.Amount / NULLIF(pi.AvgDishonorChqAmount, 0) AS RatioChqAmountToAvgDishonorChqAmount ,
+       pi.CountDishonorChq * 1.0 / NULLIF(pi.CountChq, 0) AS RatioCountDishonorChqToCountChq ,
+       ( c.Amount - pi.AvgChqAmount ) / NULLIF(pi.StDevChqAmount, 0) AS NormalizedChqAmount ,
+       pi.AvgDishonorChqAmount / NULLIF(pi.AvgChqAmount, 0) AS RadioAvgDishonorChqAmountToAvgChqAmount ,
+       pi.MaxDueDate ,
+       pi.FirstOpDays ,
+       pi.LastOpDays ,
+       pi.LengthOpDays ,
+       c.DueDays / NULLIF(pi.MaxDueDate, 0) AS RatioDueDateToMaxDueDate ,
+       c.DueDays / NULLIF(pi.FirstOpDays, 0) AS RatioDueDateToFirstOpDays ,
+       bi.BranchTrsDebtAmount ,
+       bi.BranchTrsCreditAmount ,
+       bi.BranchSumChqAmount ,
+       bi.BranchAvgChqAmount ,
+       bi.BranchStDevChqAmount ,
+       bi.BranchCountChq ,
+       bi.BranchAvgDueDays ,
+       bi.BranchCountDishonorChq ,
+       bi.BranchSumDishonorChqAmount ,
+       bi.BranchAvgDishonorChqAmount ,
+       bi.BranchAvgDishonorDueDays ,
+       bi.BranchMaxDueDate ,
+       bi.BranchFirstOpDays ,
+       bi.BranchLastOpDays ,
+       bi.BranchLengthOpDays ,
+       pi.FirstOpDays * 1.0 / NULLIF(bi.BranchFirstOpDays, 0) AS RatioFirstOpDaysToBranchFirstOpDays ,
+       pi.LastOpDays * 1.0 / NULLIF(bi.BranchLastOpDays, 0) AS RatioLastOpDaysToBranchLastOpDays ,
+       pi.LengthOpDays * 1.0 / NULLIF(bi.BranchLengthOpDays, 0) AS RatioLengthOpDaysToBranchLengthOpDays ,
+       pi.TrsDebtAmount / NULLIF(bi.BranchTrsDebtAmount, 0) AS RatioPrsDebtAmountToBranchTrsDebtAmount ,
+       pi.TrsCreditAmount / NULLIF(bi.BranchTrsCreditAmount, 0) AS RatioPrsCreditAmountToBranchTrsCreditAmount ,
+       pi.SumChqAmount / NULLIF(bi.BranchSumChqAmount, 0) AS RatioPrsSumChqAmountToBranchSumChqAmount ,
+       pi.AvgChqAmount / NULLIF(bi.BranchAvgChqAmount, 0) AS RatioPrsAvgChqAmountToBranchAvgChqAmount ,
+       pi.CountChq * 1.0 / NULLIF(bi.BranchCountChq, 0) AS RatioCountChqToBranchCountChq ,
+       pi.AvgDueDays / NULLIF(bi.BranchAvgDueDays, 0) AS RatioAvgDueDaysToBranchAvgDueDays ,
+       pi.CountDishonorChq * 1.0 / NULLIF(bi.BranchCountDishonorChq, 0) AS RatioCountDishonorChqToBranchCountDishonorChq ,
+       pi.SumDishonorChqAmount * 1.0 / NULLIF(bi.BranchSumDishonorChqAmount, 0) AS RatioSumDishonorChqAmountToBranchSumDishonorChqAmount ,
+       pi.AvgDishonorChqAmount * 1.0 / NULLIF(bi.BranchAvgDishonorChqAmount, 0) AS RatioAvgDishonorChqAmountToBranchAvgDishonorChqAmount ,
+       pi.AvgDishonorDueDays * 1.0 / NULLIF(bi.BranchAvgDishonorDueDays, 0) AS RatioAvgDishonorDueDaysToBranchAvgDishonorDueDays ,
+       c.DueDays / NULLIF(bi.BranchAvgDueDays, 0) AS RatioDueDaysToBranchAvgDueDays ,
+       c.Amount / NULLIF(bi.BranchAvgChqAmount, 0) AS RatioChqAmountToBranchAvgChqAmount ,
+       c.Amount / NULLIF(bi.BranchAvgDishonorChqAmount, 0) AS RatioChqAmountToBranchAvgDishonorChqAmount ,
+       pi.CountDishonorChq * 1.0 / NULLIF(bi.BranchCountChq, 0) AS RatioCountDishonorChqToBranchCountChq ,
+       ( c.Amount - bi.BranchAvgChqAmount ) / NULLIF(bi.BranchStDevChqAmount, 0) AS BranchNormalizedChqAmount ,
+       pi.AvgDishonorChqAmount / NULLIF(bi.BranchAvgChqAmount, 0) AS RadioAvgDishonorChqAmountToBranchAvgChqAmount ,
+       c.DueDays / NULLIF(bi.BranchMaxDueDate, 0) AS RatioDueDateToBranchMaxDueDate ,
+       DATEPART(MONTH, c.Dt_Effect) AS ChqMonth ,
+       DATEPART(DAY, c.Dt_Effect) AS ChqDayOfMonth ,
+       DATEPART(WEEKDAY, c.Dt_Effect) AS ChqDayOfWeek ,
+       DATEPART(DAYOFYEAR, c.Dt_Effect) AS ChqDayOfYear ,
+       dbo.dfn_GetPersianMonth(c.Dt_Effect) AS ChqPMonth ,
+       CONVERT(TINYINT, dbo.dfn_GetPersianDate('d', c.Dt_Effect)) AS ChqPDayOfMonth ,
+       (   SELECT SUM(pia.RemainedAmount)
+           FROM   @PrsDailyAccInfo pia
+           WHERE  pia.IdPrs = c.IdPrs
+                  AND pia.Dt_Effect = c.Dt_Effect ) AS PrsChqDueDateAccRemainedAmount ,
+       pai.AvgDebtAmount AS PrsAccAvgDebtAmount ,
+       pai.AvgCreditAmount AS PrsAvgCreditAmount ,
+       pai.AvgRemainedAmount AS PrsAccAvgRemainedAmount ,
+       pai.StDevDebtAmount AS PrsAccStDevDebtAmount ,
+       pai.StDevCreditAmount AS PrsStDevCreditAmount ,
+       pai.StDevRemainedAmount AS PrsAccStDevRemainedAmount ,
+       pai.MaxRemainedAmount AS PrsAccMaxRemainedAmount ,
+       pai.MinRemainedAmount AS PrsAccMinRemainedAmount ,
+       pai.CountDate AS PrsAccCountDate ,
+       CASE WHEN EXISTS (   SELECT TOP ( 1 ) *
+                            FROM   dbo.TrsChqStateHistory shh
+                            WHERE  shh.IdChq = c.IdChq
+                                   AND shh.IdChqState = 3 ) THEN 1
+            ELSE 0
+       END IsDishonor ,
+       CASE WHEN EXISTS (   SELECT TOP ( 1 ) *
+                            FROM   dbo.TrsChqStateHistory shh
+                            WHERE  shh.IdChq = c.IdChq
+                                   AND shh.IdChqState = 8 ) THEN 1
+            ELSE 0
+       END IsDeposit
+FROM   @Chq c
+       LEFT OUTER JOIN @PrsTrsInfo pi ON pi.IdPrs = c.IdPrs
+       LEFT OUTER JOIN @BranchInfo bi ON bi.IdBr = c.IdBr
+       LEFT OUTER JOIN @PrsAccInfo pai ON pai.IdPrs = c.IdPrs
+WHERE  c.IdPrs = @IdPrs;
+
+
+
+
