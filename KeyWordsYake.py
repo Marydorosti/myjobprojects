@@ -35,13 +35,18 @@ import yake
 from flask import Blueprint
 KeyWordsYake_bp = Blueprint('KeyWordsYake', __name__)
 
+with open('PythonPathConfig.txt', 'r', encoding="utf-8") as file:   
+
+        path=file.read()
+
+#path=r'D:/Dorosti/PayaSoft.BI/PythonCodes'
 
 
 
 
 #app = Flask(__name__)
 
-def preprocess_data(json_):
+def preprocess_data(json_,CustomerName):
     
     df=pd.DataFrame(json_)
     my_normalizer = Normalizer()
@@ -60,12 +65,13 @@ def preprocess_data(json_):
     
     #d=len(df.Type.value_counts())
     for i in range(0,len(df.Type.unique())-1):
-        df['Body'][df['Type'] == df.Type.unique()[i]].to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels'+'a'+str(i)+'.txt')
+        #df['Body'][df['Type'] == df.Type.unique()[i]].to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels'+'a'+str(i)+'.txt')
+        df['Body'][df['Type'] == df.Type.unique()[i]].to_csv(path+'/MainWordModels/'+str( CustomerName)+'a'+str(i)+'.txt')
     text=[]
     for i in range(0,len(df.Type.unique())-1):
 
-#'C:/Users/paya8/Desktop/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+str( CustomerName)
-       with open('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels'+'a'+str(i)+'.txt', 'r', encoding="utf-8") as file:
+
+        with open(path+'/MainWordModels/'+str( CustomerName)+'a'+str(i)+'.txt', 'r', encoding="utf-8") as file: 
 
          text.append(file.read())
          
@@ -164,7 +170,8 @@ def KeyWordsYake():
                AND o.BodyText <> '' "  ,conn)'''
         
         
-        with open('D://Dorosti//100.20python Service//GLOBAL PYTHON SERVICE//MainWordModels//MainWordsQuery.txt' ,'r')as file:
+        #with open('D://Dorosti//100.20python Service//GLOBAL PYTHON SERVICE//MainWordModels//MainWordsQuery.txt' ,'r')as file:
+        with open(path+'/MainWordModels/MainWordsQuery.txt' ,'r')as file:
                    query=file.read()
                    
                    
@@ -184,11 +191,11 @@ def KeyWordsYake():
         #json_=myjson['Array']
         df1=pd.DataFrame(json_)
         CustomerName=myjson['CustomerName']
-        #CustomerName="Test"
+        #CustomerName="raha"
         #CustomerName="Aram"
         #'D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'.csv'
         
-        g,m,d,z=preprocess_data(json_)
+        g,m,d,z=preprocess_data(json_,CustomerName)
         p=[]
         for i in range (0,len(z)):
            p.append([])
@@ -219,7 +226,8 @@ def KeyWordsYake():
           
        
             
-        s.to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv',encoding="utf-8",index=True)
+        #s.to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv',encoding="utf-8",index=True)
+        s.to_csv(path+'/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv',encoding="utf-8",index=True)
         
         
         #s.to_csv('C:\Users\paya8\Desktop\100.20python Service\GLOBAL PYTHON SERVICE\MainWordModels\'+ str( CustomerName) +'.csv')  

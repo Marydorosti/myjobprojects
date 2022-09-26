@@ -22,7 +22,9 @@ import pyodbc
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+with open('PythonPathConfig.txt', 'r', encoding="utf-8") as file:   
 
+        path=file.read()
 # Your API definition
 
 from flask import Blueprint
@@ -48,12 +50,14 @@ def preprocess_data(json_):
     
     #d=len(df.Type.value_counts())
     for i in range(0,len(df.Type.unique())-1):
-        df['Body'][df['Type'] == df.Type.unique()[i]].to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+'a'+str(i)+'.txt')
+        #df['Body'][df['Type'] == df.Type.unique()[i]].to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+'a'+str(i)+'.txt')
+        df['Body'][df['Type'] == df.Type.unique()[i]].to_csv(path+'/MainWordModels/'+'a'+str(i)+'.txt')
     text=[]
     for i in range(0,len(df.Type.unique())-1):
 
 #'C:/Users/paya8/Desktop/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+str( CustomerName)
-       with open('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+'a'+str(i)+'.txt', 'r', encoding="utf-8") as file:
+       #with open('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+'a'+str(i)+'.txt', 'r', encoding="utf-8") as file:
+       with open(path+'/MainWordModels/'+'a'+str(i)+'.txt', 'r', encoding="utf-8") as file:
 
          text.append(file.read())
     stop_words=['سلام','اً','ذیل','شرکت','می','های','خواهشمند','فوق','حضور','یافت','پیرو','جناب','فرمائید','شماره','است','این','تشکر','موضوع','نام','خدا','نام خدا','،',':  موضوع','و احترام','بسمه تعالی','به نام خدا','احترا ما','احترام','آقا','خانم','باشد','از','به','که','در','با','شد','برای','کرد','با سلام',' و ','تشار','.','(',')','،',':',';','با احترام','صل','ص','','بر ای','+','محترم','',',','احترا م']
@@ -153,11 +157,27 @@ def preprocess_data(json_):
 def main_words():
     try:
         
-        conn=pyodbc.connect('Driver={Sql Server};'
+        '''conn=pyodbc.connect('Driver={Sql Server};'
                                    'Server=192.168.100.17\\SQL2019;'
                                    'Database=PayaAfzarPendarData;'
                                    'UID=sa;'
                                    'PWD=PAYA+master;'
+                                   )'''
+    
+        myjson=request.json
+        ConnectionString=myjson['ConnectionString']
+        s=ConnectionString.split(';')
+        
+        a=s[0].split('=')[1]
+        b=s[1].split('=')[1]
+        c=s[2].split('=')[1]
+        d=s[3].split('=')[1]
+        m='Sql Server'
+        conn=pyodbc.connect(Driver=m,
+                                   Server=a,
+                                   Database=b,
+                                   UID=c,
+                                   PWD=d
                                    )
                
         GF=pd.read_sql_query("SELECT o.Id, \
@@ -179,11 +199,11 @@ def main_words():
         
         #CustomerName="Aramesh"
         # myjson=request.json
-        myjson=request.json
+        #myjson=request.json
         #json_=myjson['Array']
         df1=pd.DataFrame(json_)
-        #CustomerName=myjson['CustomerName']
-        CustomerName="Test"
+        CustomerName=myjson['CustomerName']
+        #CustomerName="Test4"
         #CustomerName="Aram"
         #'D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'.csv'
         
@@ -229,7 +249,8 @@ def main_words():
             #write.writerows(p)
             
             
-        s.to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv',encoding="utf-8",index=True)
+        #s.to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv',encoding="utf-8",index=True)
+        s.to_csv(path+'/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv',encoding="utf-8",index=True)
         
         
         #s.to_csv('C:\Users\paya8\Desktop\100.20python Service\GLOBAL PYTHON SERVICE\MainWordModels\'+ str( CustomerName) +'.csv')  

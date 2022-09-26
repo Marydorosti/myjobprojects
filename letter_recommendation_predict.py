@@ -10,6 +10,7 @@ import joblib
 import traceback
 import pandas as pd
 import numpy as np
+import os.path
 #import sys
 import json
 from flask import Flask, request, render_template, session, redirect
@@ -17,6 +18,11 @@ from sklearn.impute import SimpleImputer
 
 from flask import Blueprint
 letter_recommendation_predict_bp = Blueprint('letter_recommendation_predict', __name__)
+
+with open('PythonPathConfig.txt', 'r', encoding="utf-8") as file:   
+
+        path=file.read()
+
 
 #letter_recommendation_predict
 
@@ -83,48 +89,48 @@ def letter_recommendation_predict():
                #json_=request.json
                #json_=myjson
                CustomerName=myjson['CustomerName']
-               #CustomerName="Aramesh"             
+               #CustomerName="PAYA2"             
                #a_json = json.loads(json_)
                #import joblib
                #import traceback
                import pandas as pd
                #import datetime
                import numpy as np            
-               query,df=preprocess_data(json_)        
+               query,df=preprocess_data(json_)  
+               
+               #path_to_csvfile=path+'/LetterRecommendModels/'+str( CustomerName)+'.csv'
+               #if ( path_to_csvfile.is_file):
+               #if (os.path.exists(path+'/LetterRecommendModels/'+str( CustomerName)+'.csv')&os.path.exists(path+'/LetterRecommendModels/'+str( CustomerName)+'.csv')):
+               if (os.path.exists(path+'/LetterRecommendModels/'+str( CustomerName)+'.csv')):
                #df5=pd.read_csv('C:/Users/paya8/Desktop/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'.csv')
-               df5=pd.read_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'.csv')
+               #df5=pd.read_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'.csv')
+                df5=pd.read_csv(path+'/LetterRecommendModels/'+str( CustomerName)+'.csv')
                
                #df5=df5.astype({"Name":int})
                #model = joblib.load('C:/Users/paya8/Desktop/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str(CustomerName)+'xgb_clf.pkl')
-               model = joblib.load('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str(CustomerName)+'xgb_clf.pkl')
+               #model = joblib.load('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str(CustomerName)+'xgb_clf.pkl')
+                model = joblib.load(path+'/LetterRecommendModels/'+str(CustomerName)+'xgb_clf.pkl')
                
             
-               prediction=model.predict_proba(query.reshape(1,-1))
+                prediction=model.predict_proba(query.reshape(1,-1))
                
                #prediction=model.predict_proba(query)
                
-               topk = np.argsort(prediction,axis=1)[:,-4:]
+                topk = np.argsort(prediction,axis=1)[:,-4:]
                #topk2=list(topk)
                #z=[topk[0][2],topk[0][1],topk[0][0]]
-               m=[df5.Name[topk[0][3]],df5.Name[topk[0][2]],df5.Name[topk[0][1]],df5.Name[topk[0][0]]]
-               #prediction=list(pred)
-               #m=json_
+                m=[df5.Name[topk[0][3]],df5.Name[topk[0][2]],df5.Name[topk[0][1]],df5.Name[topk[0][0]]]
+                #m=[0]  
+                return jsonify({'recommendation':str(m)})
+                
+               else:
+                m=[0]   
+                
                #m=[0,371]
-               #m=[df['NodeType'][0]]
-               #m=[m[0]]
+               #return jsonify({'recommendation':str(m)})
+                return jsonify({'recommendation':str(m)})
                
-            
-               #query = query.reindex(columns=model_columns, fill_value=0)
-               #a=np.array(df)
-               #x = df.iloc[:,0:6]
-               #a=np.array(x)
- 
-               #prediction = list(XG.predict(query))
-               #return str(scale[0])
-
-               return jsonify({'recommendation': str(m)})
-               
-               #return  (str(m))        
+               #return  0        
                
         except:
 

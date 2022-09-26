@@ -26,6 +26,10 @@ from sklearn.impute import SimpleImputer
 
 from flask import Blueprint
 letter_recommendation_train_bp = Blueprint('letter_recommendation_train', __name__)
+with open('PythonPathConfig.txt', 'r', encoding="utf-8") as file:   
+
+        path=file.read()
+
 
 
 #app = Flask(__name__,template_folder='template')
@@ -38,7 +42,8 @@ def unique(list1):
 def preprocess_data(json_,CustomerName):
       df = pd.DataFrame(json_)
       m=pd.DataFrame(df['ReceiverUser'])
-      m.to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'RU.csv')
+      #m.to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'RU.csv')
+      m.to_csv(path+'/LetterRecommendModels/'+str( CustomerName)+'RU.csv')
       from sklearn import preprocessing
       from sklearn.linear_model import LogisticRegression
       from sklearn.model_selection import train_test_split
@@ -76,14 +81,16 @@ def preprocess_data(json_,CustomerName):
       
       a=unique(encoded1)
       #f=[m.ReceiverUser.unique]
-      m=pd.read_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'RU.csv')
+      #m=pd.read_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'RU.csv')
+      m=pd.read_csv(path+'/LetterRecommendModels/'+str( CustomerName)+'RU.csv')
       f=unique(m.ReceiverUser)
       df3 = pd.DataFrame(zip(f, a),
                columns =['Name', 'code'])
       #df3.to_csv(str(CustomerName)+'.csv')
       #D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels
       #df3.to_csv('C:/Users/paya8/Desktop/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'.csv')
-      df3.to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'.csv')
+      #df3.to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'.csv')
+      df3.to_csv(path+'/LetterRecommendModels/'+str( CustomerName)+'.csv')
      
       return xtrain,xtest,ytrain,ytest ,f,a
 @letter_recommendation_train_bp.route('/letter_recommendation_train',methods=['POST'])
@@ -122,7 +129,8 @@ def letter_recommendation_train():
                                    )'''
                
                
-               with open('D://Dorosti//100.20python Service//GLOBAL PYTHON SERVICE//LetterRecommendModels//letterRecommendationQuery.txt' ,'r')as file:
+               #with open('D://Dorosti//100.20python Service//GLOBAL PYTHON SERVICE//LetterRecommendModels//letterRecommendationQuery.txt' ,'r')as file:
+               with open(path+'/LetterRecommendModels/letterRecommendationQuery.txt' ,'r')as file:    
                    query=file.read()
                    
                    
@@ -146,7 +154,8 @@ def letter_recommendation_train():
                xgb_train_accuracy=xgb_clf.score(xtrain,ytrain)
                
                #joblib.dump(xgb_clf,'C:/Users/paya8/Desktop/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'xgb_clf.pkl')
-               joblib.dump(xgb_clf,'D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'xgb_clf.pkl')
+               #joblib.dump(xgb_clf,'D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'xgb_clf.pkl')
+               joblib.dump(xgb_clf,path+'/LetterRecommendModels/'+str( CustomerName)+'xgb_clf.pkl')
                #print("Model dumped!") 
                #xgb_clf = joblib.load('xgb_clf.pkl') 
                #m=xtrain.shape
@@ -154,7 +163,7 @@ def letter_recommendation_train():
                #return  (str("Model dumped!"))
                #return jsonify({'RESULT': str("Model dumped!")})
            
-               return jsonify({'RESULT': str("Model dumped")})
+               return jsonify({'RESULT': str("Letter Recommender Model dumped")})
            
                #return jsonify({'RESULT': str(json_)})
                #return (CustomerName         

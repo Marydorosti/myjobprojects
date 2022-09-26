@@ -20,6 +20,9 @@ import os.path
 
 from flask import Blueprint,make_response
 Main_WordsPredict_bp = Blueprint('Main_WordsPredict', __name__)
+with open('PythonPathConfig.txt', 'r', encoding="utf-8") as file:   
+
+        path=file.read()
 
 
 
@@ -40,10 +43,12 @@ def Main_WordsPredict():
         #'D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/LetterRecommendModels/'+str( CustomerName)+'.csv'
         #CustomerName="Aramesh"
         
-        file_exist=os.path.isfile('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv')
+        #file_exist=os.path.isfile('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv')
+        file_exist=os.path.isfile(path+'/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv')
         if file_exist==True:
         
-          df=pd.read_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv')
+          #df=pd.read_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv')
+          df=pd.read_csv(path+'/MainWordModels/'+str( CustomerName)+'MainWords'+'.csv')
         #if df>0:
             
           o=df['Group'].tolist()
@@ -103,6 +108,8 @@ def Main_WordsPredict():
         KeyWords=kw.extract_keywords(P)
         KeyWords.sort(key=lambda x:x[1])
         r=[]
+        #if len(KeyWords)>0:
+         
         for i in range (0,NumberOfKeyWords):
             r.append(KeyWords[i][0])
         #P=P.encode("utf-8")
@@ -163,11 +170,20 @@ def Main_WordsPredict():
            A=r+k
         else:
            A=r
-            
+        #if len(A)>0:   
         #R=k
             
             #return(make_response({"KeyWords":dumps(k)}))
-        return(make_response({"KeyWords":dumps(A)})) 
+        return(make_response({"KeyWords":dumps(A)}))
+            #return ;
+        #elif len(A)<=0:
+            #z=["None"]
+            #return make_response({"KeyWords": "first write a letter"})
+            #return(make_response({"KeyWords":dumps(z)}))
+            #return ;
+            
+            
+            
                
      except:
           

@@ -26,7 +26,9 @@ from similarlettersClustering import similarlettersClustering_bp
 from KeyWordsYake import KeyWordsYake_bp
 from CustomerClusteringPredict import CustomerClusteringPredict_bp
 from PredictAssociation import Predict_Association_bp
-
+from SearchEngine import SearchEngineTrain_bp
+from SearchEnginePredict import SearchEnginePredict_bp
+from OCRservice import OCRService_bp
 
 
 
@@ -46,13 +48,17 @@ app.register_blueprint(main_words_bp, url_prefix='/main_words')
 app.register_blueprint(forecastingTrainAPI_bp, url_prefix='/forecastingTrainAPI')
 app.register_blueprint(forecastingPredict_bp, url_prefix='/forecastingPredict')
 app.register_blueprint(Main_WordsPredict_bp, url_prefix='/Main_WordsPredict')
-#app.register_blueprint(similarletterClusteringPredict_bp,url_prefix='/similarletterClusteringPredict')
+#app.register_blueprint(similarlet_terClusteringPredict_bp,url_prefix='/similarletterClusteringPredict')
 app.register_blueprint(similarlettersClustering_bp,url_prefix='/similarlettersClustering')
 app.register_blueprint(similarletterClusteringPredict_bp,url_prefix='/similarletterClusteringPredict')
 app.register_blueprint(SQPredictService_bp,url_prefix='/SQPredictService')
 app.register_blueprint(SQClusteringService_bp,url_prefix='/SQClusteringService')
 app.register_blueprint(KeyWordsYake_bp,url_prefix='/KeyWordsYake')
 app.register_blueprint(CustomerClusteringPredict_bp,url_prefix='/CustomerClusteringPredict')
+app.register_blueprint(SearchEngineTrain_bp,url_prefix='/SearchEngineTrain')
+app.register_blueprint(SearchEnginePredict_bp,url_prefix='/SearchEnginePredict')
+app.register_blueprint(OCRService_bp,url_prefix='/OCRService')
+
 
  
 port = 18888 # If you don't provide any port the port will be set to 18888

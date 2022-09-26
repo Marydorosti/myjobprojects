@@ -22,32 +22,31 @@ import traceback
 from flask import Flask, request, jsonify
 from parsivar import Tokenizer
 from parsivar import Normalizer
-#import joblib
-#import traceback
-#import pandas as pd
-#import numpy as np
-#import sys
-#import json
-#from flask import Flask, request, render_template, session, redirect
-#from sklearn.cluster import KMeans
-
-
-
-
 from flask import Blueprint
 similarletterClusteringPredict_bp = Blueprint('similarletterClusteringPredict', __name__)
+
+with open('PythonPathConfig.txt', 'r', encoding="utf-8") as file:   
+
+        path=file.read()
+
 
 def preprocess_sentence(sentence):
     myjson=request.json
     json_=myjson["array"]
+    #json_=request.json
     CustomerName=myjson["customerName"]
+    #CustomerName="laleh"
+    
     #sentence=json_[0]["body"]
     
-    df = pd.read_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterClusterNumber.csv')
+    #df = pd.read_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterClusterNumber.csv')
+    df = pd.read_csv(path+'/similarLettersModels/'+str(CustomerName)+'LetterClusterNumber.csv')
     #df2=pd.read_excel('C:/Users/paya8/Desktop/GLOBAL PYTHON SERVICE/similarQuestionsModels/Porsesh & Pasokh (11) (1).xlsx')
-    df5=pd.read_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'similarLetterAvgVector')
+    #df5=pd.read_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'similarLetterAvgVector')
+    df5=pd.read_csv(path+'/similarLettersModels/'+str(CustomerName)+'similarLetterAvgVector')
     #df2=df2.iloc[:,5:7]
-    filename = 'D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterClustering_model.sav'
+    #filename = 'D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterClustering_model.sav'
+    filename = path+'/similarLettersModels/'+str(CustomerName)+'LetterClustering_model.sav'
     kmeans_model = pickle.load(open(filename, 'rb'))
     stop_words=['؟','حلی','حل','راه','وجود','دارد','چیست','می خواهیم','سلام','اً','شرکت','می','های','خواهشمند','فوق','حضور','یافت','پیرو','جناب','فرمائید','شماره','است','این','تشکر','موضوع','نام','خدا','نام خدا','،',':  موضوع','و احترام','بسمه تعالی','به نام خدا','احترا ما','احترام','آقا','خانم','باشد','از','به','که','در','با','با سلام',' و ','.','(',')','،',':',';','با احترام','+','محترم','','1','2','3','4','5','6','7','8','9','0','?','_','__','/','//','-','{}','احترا م']
     my_normalizer = Normalizer()
@@ -67,7 +66,8 @@ def preprocess_sentence(sentence):
 
     #sentence = input("Enter a sentence: ")
     words = sentence.split()
-    model1 = fasttext.load_model('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterWord_Vectors.bin')
+    #model1 = fasttext.load_model('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterWord_Vectors.bin')
+    model1 = fasttext.load_model(path+'/similarLettersModels/'+str(CustomerName)+'LetterWord_Vectors.bin')
     #words = sentence.split()
     
     #stop_words=[''سلام','اً','شرکت','می','های','خواهشمند','فوق','حضور','یافت','پیرو','جناب','فرمائید','شماره','است','این','تشکر','موضوع','نام','خدا','نام خدا','،',':  موضوع','و احترام','بسمه تعالی','به نام خدا','احترا ما','احترام','آقا','خانم','باشد','از','به','که','در','با','با سلام',' و ','.','(',')','،',':',';','با احترام','+','محترم','','1','2','3','4','5','6','7','8','9','0','?','_','__','/','//','-','؟','.','{}','احترا ]
@@ -109,7 +109,8 @@ def SQPredictService():
     #df2=pd.read_excel('C:/Users/paya8/Desktop/GLOBAL PYTHON SERVICE/similarQuestionsModels/Porsesh & Pasokh (11) (1).xlsx')
     #df5=pd.read_csv('C:/Users/paya8/Desktop/GLOBAL PYTHON SERVICE/similarQuestionsModels/S.csv')
     #df2=df2.iloc[:,5:7]
-    filename ='D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterClustering_model.sav'
+    #filename ='D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterClustering_model.sav'
+    filename =path+'/similarLettersModels/'+str(CustomerName)+'LetterClustering_model.sav'
     kmeans_model = pickle.load(open(filename, 'rb'))
     vectors,df5,df=preprocess_sentence(sentence)
     h=[]

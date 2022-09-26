@@ -61,7 +61,7 @@ def Apriory():
              #***********Connect to sql server****************************************
              conn=pyodbc.connect('Driver={Sql Server};'
                                    'Server=192.168.100.17\\SQL2019;'
-                                   'Database=JahanPartData;'
+                                   'Database=Modern_Master;'
                                   'UID=sa;'
                                    'PWD=PAYA+master;'
                                    )
@@ -75,7 +75,7 @@ def Apriory():
 
              import pandas as pd
              GF=pd.read_sql_query(query,conn) 
-             GF=GF[0:50000]
+             GF=GF[0:5000]
                   
                
              json_=GF
@@ -218,13 +218,13 @@ def Apriory():
              
              conn = pyodbc.connect('Driver={SQL Server};Server=192.168.100.17\sql2019;Database=Modern_Master;uid=sa;pwd=PAYA+master')
              cursor = conn.cursor()
-             cursor.execute("DELETE FROM  dbo.[bi.GdsRuleId]  ;")
+             cursor.execute("DELETE FROM  bi.GdsRuleId  ;")
              cursor.execute("DELETE FROM  dbo.[bi.GdsRuleDetail1]  ;")
-             cursor.execute("DELETE FROM  dbo.[bi.GdsRuleDtail2]  ;")
+             cursor.execute("DELETE FROM  dbo.[bi.GdsRuleDetail2]  ;")
              
              conn.commit()
              for i in range (0,len(v1)):
-                  cursor.execute("INSERT INTO  dbo.[bi.GdsRuleId] (GdsRuleId,lift,confident)  VALUES (?,?,?);"  ,i,float(lift[i]),float(confident[i]))
+                  cursor.execute("INSERT INTO  bi.GdsRuleId (GdsRuleId,lift,confident)  VALUES (?,?,?);"  ,i,float(lift[i]),float(confident[i]))
                   conn.commit()
                  
              
@@ -241,7 +241,7 @@ def Apriory():
                  for j in range(0,len(v2[i])): 
                      
                      
-                       cursor.execute("INSERT INTO  dbo.[bi.GdsRuleDtail2] (IdHdr,IdGds)  VALUES (?,?);"  ,float(i),float(v2[i][j]))
+                       cursor.execute("INSERT INTO  dbo.[bi.GdsRuleDetail2] (IdHdr,IdGds)  VALUES (?,?);"  ,float(i),float(v2[i][j]))
                        conn.commit()
             
              

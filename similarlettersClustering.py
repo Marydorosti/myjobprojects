@@ -33,6 +33,11 @@ import re
 from flask import Blueprint
 similarlettersClustering_bp = Blueprint('similarlettersClustering', __name__)
 
+with open('PythonPathConfig.txt', 'r', encoding="utf-8") as file:   
+
+        path=file.read()
+
+
 @similarlettersClustering_bp.route('/similarlettersClustering',methods=['POST'])
 def SQClusteringService():
     
@@ -44,10 +49,10 @@ def SQClusteringService():
     myjson=request.json 
      
     #json_=myjson['Array']
-        #json_=request.json
+    #json_=request.json
         
     CustomerName=myjson['CustomerName']
-    #CustomerName="ssalam"
+    #CustomerName="laleh"
     ConnectionString=myjson['ConnectionString']
      
      
@@ -69,6 +74,7 @@ def SQClusteringService():
                                    UID=c,
                                    PWD=d
                                    )
+    
     
                
     '''GF=pd.read_sql_query("SET TRAN ISOLATION LEVEL READ UNCOMMITTED;\
@@ -96,7 +102,8 @@ def SQClusteringService():
                              
     #cursor = conn.cursor()  
      
-    with open('D://Dorosti//100.20python Service//GLOBAL PYTHON SERVICE//similarLettersModels//SimilarLettersQuery.txt' ,'r')as file:
+    #with open('D://Dorosti//100.20python Service//GLOBAL PYTHON SERVICE//similarLettersModels//SimilarLettersQuery.txt' ,'r')as file:
+    with open(path+'/similarLettersModels/SimilarLettersQuery.txt' ,'r')as file:
                    query=file.read()
                    
                    
@@ -187,17 +194,17 @@ def SQClusteringService():
                      #deleteWords =stop_words
     #for word in deleteWords:
                       #m[i]= m[i].replace(word,"")
-    with open('readme.txt', 'w', encoding="utf-8") as g:
+    with open(path+'/similarLettersModels/'+str(CustomerName)+'readme.txt', 'w', encoding="utf-8") as g:
       for line in f:
         g.write(line)
         g.write('\n')
         
-    with open('readme.txt', 'r',encoding="utf-8") as file:
+    with open(path+'/similarLettersModels/'+str(CustomerName)+'readme.txt', 'r',encoding="utf-8") as file:
        text = file.read()
        
 #####################**WordVectorTrain**############################################### 
    
-    model1 = fasttext.train_unsupervised('readme.txt', model='skipgram',dim=50,ws=5,epoch=200) 
+    model1 = fasttext.train_unsupervised(path+'/similarLettersModels/'+str(CustomerName)+'readme.txt', model='skipgram',dim=50,ws=5,epoch=200) 
     wordfreq={}
 
     #df1=list(df.iloc[:,0])
@@ -271,7 +278,8 @@ def SQClusteringService():
             l[i ]= str(l[i])
     S=pd.DataFrame(l)
     
-    S.to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'similarLetterAvgVector')
+    #S.to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'similarLetterAvgVector')
+    S.to_csv(path+'/similarLettersModels/'+str(CustomerName)+'similarLetterAvgVector')
     
     #S.to_csv('S.csv')
 #'D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'similarLettermodel'
@@ -300,15 +308,17 @@ def SQClusteringService():
 
     df6 = pd.DataFrame({'Number' : a,'ClusterName' : labels,'UId':GF.iloc[0:len(a),0]}, columns=['Number','ClusterName','UId'])
     #'C:/Users/paya8/Desktop/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'.csv'
-    df6.to_csv('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterClusterNumber.csv')
+    df6.to_csv(path+'/similarLettersModels/'+str(CustomerName)+'LetterClusterNumber.csv')
 
 
     #filename = 'Clustering_model.sav'
-    filename='D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterClustering_model.sav'
+    #filename='D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterClustering_model.sav'
+    filename=path+'/similarLettersModels/'+str(CustomerName)+'LetterClustering_model.sav'
     pickle.dump(kmeans, open(filename, 'wb'))
 
     #model1.save_model("Word_Vectors.bin")
-    model1.save_model('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterWord_Vectors.bin')
+    #model1.save_model('D:/Dorosti/100.20python Service/GLOBAL PYTHON SERVICE/similarLettersModels/'+str(CustomerName)+'LetterWord_Vectors.bin')
+    model1.save_model(path+'/similarLettersModels/'+str(CustomerName)+'LetterWord_Vectors.bin')
     
    
     

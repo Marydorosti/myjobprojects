@@ -1,8 +1,18 @@
-import pyodbc
+import sklearn
+import deap
+import nltk
+#import pandas
+import tqdm
+import apyori
+#import joblib
+import numpy
+#import fasttext
+#from flask import Flask, request, jsonify
+'''import pyodbc
 from flask import Flask, request, jsonify
 import joblib
 import yake
-import pyodbc
+import pyodbcpyth
 import scipy
 import numpy
 x=numpy.array([1,2,3])
@@ -72,7 +82,7 @@ from flask import Blueprint
 
 
 #pipfrom sklearn.cluster import KMeans
-'''import heapq
+import heapq
 import joblib
 print("hello world")
 #import deap
@@ -101,3 +111,4 @@ from collections import Counter
 
 from flask import Blueprint
 #from skl2onnx.common.data_types import FloatTensorType'''
+#import click
